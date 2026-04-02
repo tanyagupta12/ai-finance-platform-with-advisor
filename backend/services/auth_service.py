@@ -5,8 +5,11 @@ users = [
     {"email": "test@gmail.com", "password": "1234"}
 ]
 
+# --------------------------------
+# REGISTER
+# --------------------------------
 def register_user(data):
-    email = data.email
+    email = data.email.lower().strip()
     password = data.password
 
     for u in users:
@@ -18,16 +21,21 @@ def register_user(data):
         "password": password
     })
 
-    return {"message": "User registered successfully"}
+    return {
+        "message": "User registered successfully"
+    }
 
 
+# --------------------------------
+# LOGIN
+# --------------------------------
 def login_user(data):
-    email = data.email
+    email = data.email.lower().strip()
     password = data.password
 
     for u in users:
         if u["email"] == email and u["password"] == password:
-            
+
             token = create_access_token({"sub": email})
 
             return {
@@ -36,8 +44,3 @@ def login_user(data):
             }
 
     raise HTTPException(status_code=401, detail="Invalid credentials")
-
-
-
-    
-            

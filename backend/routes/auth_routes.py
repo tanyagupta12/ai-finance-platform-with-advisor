@@ -1,17 +1,38 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from services.auth_service import register_user, login_user
 from schemas.auth_schema import UserRegister, UserLogin
 
 router = APIRouter()
 
+# --------------------------------
+# REGISTER
+# --------------------------------
 @router.post("/register")
 def register(data: UserRegister):
-    return register_user(data)
+    try:
+        result = register_user(data)
+        return {
+            "status": "success",
+            "data": result
+        }
+    except HTTPException as e:
+        raise e
+    except Exception:
+        raise HTTPException(status_code=500, detail="Registration failed")
 
- # ----------------------------------------------
-# "email": "test@gmail.com","password": "1234"
-# ----------------------------------------------
 
+# --------------------------------
+# LOGIN
+# --------------------------------
 @router.post("/login")
 def login(data: UserLogin):
-    return login_user(data)
+    try:
+        result = login_user(data)
+        return {
+            "status": "success",
+            "data": result
+        }
+    except HTTPException as e:
+        raise e
+    except Exception:
+        raise HTTPException(status_code=500, detail="Login failed")

@@ -69,6 +69,43 @@ An intelligent financial dashboard that provides real-time stock data, portfolio
 Frontend (React) → Backend (FastAPI) → External APIs (yFinance)
 AI Model → Financial Insights → UI
 
+
+### Diagram
+
+
+           ┌───────────────┐
+           │     User      │
+           └──────┬────────┘
+                  │
+                  ▼
+        ┌──────────────────┐
+        │ React Frontend   │
+        │ (UI + Charts)    │
+        └──────┬───────────┘
+               │ API Calls
+               ▼
+        ┌──────────────────┐
+        │ FastAPI Backend  │
+        │ (JWT Auth + APIs)│
+        └──────┬───────────┘
+               │
+               ▼
+        ┌──────────────────┐
+        │ Service Layer    │
+        │ (Business Logic) │
+        └──────┬───────────┘
+         ┌─────┴───────────┐
+         ▼                 ▼
+ ┌───────────────┐   ┌───────────────┐
+ │ yFinance API  │   │ AI Model      │
+ │ (Stock Data)  │   │ (Ollama)      │
+ └───────────────┘   └───────────────┘
+         ▼                 ▼
+        └──────► Response ◄──────┘
+                      │
+                      ▼
+            UI (Charts + Insights)
+
 ---
 
 ## ⚙️ Installation
@@ -123,7 +160,14 @@ npm start
 
 ## 📸 Screenshots
 
-(Add screenshots after UI completion)
+![Dashboard](Screenshots/Dashboard.png)
+![Login](Screenshots/Login.png)
+![StockChart](Screenshots/Stock_chart.png)
+![Stockprediction](Screenshots/Stock_prediction.png)
+![Ai_Advisor](Screenshots/Ai_advisor.png)
+![Expenses](Screenshots/Expenses.png)
+![Portfolio](Screenshots/Portfolio.png)
+![SlideBar](Screenshots/Slidebar.png)
 
 ---
 

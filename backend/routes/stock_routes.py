@@ -7,32 +7,40 @@ router = APIRouter()
 # -------------------------------
 # Stock Price
 # -------------------------------
-@router.get("/stock/{ticker}")
+@router.get("/{ticker}")
 def get_stock_price(ticker: str):
     data = get_stock_data(ticker)
 
-    if data is None:
+    if data is None or data.empty:
         raise HTTPException(status_code=404, detail="Stock not found")
 
     price = float(data["Close"].iloc[-1])
 
     return {
-        "ticker": ticker.upper(),
-        "price": price
+        "status": "success",
+        "data": {
+            "ticker": ticker.upper(),
+            "price": price
+        }
     }
 
 
 # -------------------------------
 # Stock History
 # -------------------------------
-@router.get("/stock/{ticker}/history")
+@router.get("/{ticker}/history")
 def get_stock_history(ticker: str):
     data = get_stock_data(ticker, "1y")
 
-    if data is None:
+    if data is None or data.empty:
         raise HTTPException(status_code=404, detail="Stock not found")
 
-    return dict(list(data["Close"].to_dict().items())[-100:])
+    history = dict(list(data["Close"].to_dict().items())[-100:])
+
+    return {
+        "status": "success",
+        "data": history
+    }
 
 
 # -------------------------------
@@ -42,12 +50,15 @@ def get_stock_history(ticker: str):
 def predict_price(ticker: str):
     data = get_stock_data(ticker, "1y")
 
-    if data is None:
+    if data is None or data.empty:
         raise HTTPException(status_code=404, detail="Stock not found")
 
     prediction = predict_stock(data)
 
     return {
-        "ticker": ticker.upper(),
-        "predicted_price": prediction
+        "status": "success",
+        "data": {
+            "ticker": ticker.upper(),
+            "predicted_price": prediction
+        }
     }

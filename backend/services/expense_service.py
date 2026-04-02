@@ -5,7 +5,7 @@ from data_store import expenses
 # --------------------------------
 # Categories Init
 # --------------------------------
-categories = ["food", "travel"]
+categories = set(["food", "travel"])
 
 for cat in categories:
     if not any(e.get("category") == cat and "date" not in e for e in expenses):
@@ -27,11 +27,19 @@ def calculate_summary():
     return summary, total
 
 
+def generate_insights(categories_data):
+    insights = [
+        f"High spending on {c['category']}"
+        for c in categories_data if c["percentage"] > 40
+    ]
+    return insights if insights else ["Spending is balanced"]
+
+
 # --------------------------------
 # SERVICES
 # --------------------------------
 def add_expense_service(data):
-    category = data.category.lower()
+    category = data.category.lower().strip()   # ✅ FIX
     amount = data.amount
     date = data.date or datetime.now().strftime("%Y-%m-%d")
 
@@ -42,7 +50,7 @@ def add_expense_service(data):
         amount = float(amount)
         if amount <= 0:
             raise ValueError
-    except:
+    except ValueError:
         raise HTTPException(status_code=400, detail="Invalid amount")
 
     for e in expenses:
@@ -56,7 +64,7 @@ def add_expense_service(data):
         "date": date
     })
 
-    return {"message": "Expense added"}
+    return {"message": "Expense added successfully"}
 
 
 def get_summary_service():
@@ -76,13 +84,7 @@ def get_detailed_service():
             "percentage": percentage
         })
 
-    insights = [
-        f"High spending on {r['category']}"
-        for r in result if r["percentage"] > 40
-    ]
-
-    if not insights:
-        insights.append("Spending is balanced")
+    insights = generate_insights(result)
 
     return {"data": result, "insights": insights}
 
@@ -95,7 +97,7 @@ def get_trend_service():
             month = e["date"][:7]
             trend[month] = trend.get(month, 0) + e["amount"]
 
-    return trend
+    return {"trend": trend}
 
 
 def get_expenses_service():
@@ -115,26 +117,20 @@ def get_expenses_service():
 def get_insights_service():
     summary, total = calculate_summary()
 
-    categories = []
+    categories_data = []
     for cat, amt in summary.items():
         percentage = round((amt / total) * 100, 2) if total else 0
 
-        categories.append({
+        categories_data.append({
             "category": cat,
             "amount": amt,
             "percentage": percentage
         })
 
-    insights = [
-        f"High spending on {c['category']}"
-        for c in categories if c["percentage"] > 40
-    ]
-
-    if not insights:
-        insights.append("Spending is balanced")
+    insights = generate_insights(categories_data)
 
     return {
         "total": total,
-        "categories": categories,
+        "categories": categories_data,
         "insights": insights
     }

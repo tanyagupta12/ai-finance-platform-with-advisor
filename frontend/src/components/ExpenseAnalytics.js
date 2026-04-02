@@ -12,6 +12,7 @@ import {
   Legend,
   Title
 } from "chart.js";
+import SnackbarAlert from "./SnackbarAlert";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend, Title);
 
@@ -28,15 +29,15 @@ function ExpenseAnalytics() {
   const [loading, setLoading] = useState(false);
   const [btnLoading, setBtnLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  // 🔥 FETCH INSIGHTS
   const fetchInsights = async () => {
     try {
       setLoading(true);
       setError("");
 
       const res = await API.get("/expense/insights");
-      const data = res.data;
+      const data = res.data.data;
 
       setPercentData(data.categories || []);
       setInsights(data.insights || []);
@@ -55,22 +56,22 @@ function ExpenseAnalytics() {
       });
 
     } catch {
-      setError("Failed to load expense data");
+      setError("Unable to load expense data");
     } finally {
       setLoading(false);
     }
   };
 
-  // 🔥 FETCH TREND
   const fetchTrend = async () => {
     try {
       const res = await API.get("/expense/trend");
+      const data = res.data.data.trend;
 
       setTrendData({
-        labels: Object.keys(res.data),
+        labels: Object.keys(data),
         datasets: [{
           label: "Monthly Trend",
-          data: Object.values(res.data),
+          data: Object.values(data),
           backgroundColor: "#6366f1"
         }]
       });
@@ -85,23 +86,24 @@ function ExpenseAnalytics() {
     fetchTrend();
   }, []);
 
-  // 🔥 ADD EXPENSE
   const addExpense = async () => {
 
     if (!category || !amount) {
-      alert("Enter all fields");
+      setError("Please select category and enter amount");
       return;
     }
 
     if (Number(amount) <= 0) {
-      alert("Invalid amount");
+      setError("Amount must be greater than 0");
       return;
     }
 
     try {
       setBtnLoading(true);
+      setError("");
+      setSuccess("");
 
-      await API.post("/expense/expenses", {
+      await API.post("/expense/add", {
         category,
         amount: Number(amount)
       });
@@ -109,11 +111,13 @@ function ExpenseAnalytics() {
       setCategory("");
       setAmount("");
 
+      setSuccess("Expense added successfully");
+
       fetchInsights();
       fetchTrend();
 
     } catch {
-      alert("Failed to add expense");
+      setError("Failed to add expense. Try again.");
     } finally {
       setBtnLoading(false);
     }
@@ -130,11 +134,7 @@ function ExpenseAnalytics() {
   };
 
   if (loading && !chartData) {
-    return <p style={{ color: "#fff" }}>Loading expense data...</p>;
-  }
-
-  if (error && !chartData) {
-    return <p style={{ color: "red" }}>{error}</p>;
+    return <p style={{ color: "#94a3b8" }}>Loading expense dashboard...</p>;
   }
 
   return (
@@ -154,14 +154,14 @@ function ExpenseAnalytics() {
               value={category}
               onChange={e => setCategory(e.target.value)}
             >
-              <option value="">Category</option>
+              <option value="">Select Category</option>
               <option value="food">Food</option>
               <option value="travel">Travel</option>
             </select>
 
             <input
               style={styles.input}
-              placeholder="Amount"
+              placeholder="Enter amount (₹)"
               value={amount}
               onChange={e => setAmount(e.target.value)}
             />
@@ -171,7 +171,7 @@ function ExpenseAnalytics() {
               onClick={addExpense}
               disabled={btnLoading}
             >
-              {btnLoading ? "Adding..." : "Add"}
+              {btnLoading ? "Adding..." : "Add Expense"}
             </button>
           </div>
         </div>
@@ -182,18 +182,24 @@ function ExpenseAnalytics() {
           <div style={styles.grid}>
             <div style={styles.card}>
               <h3>📊 Overview</h3>
-              {chartData && <Bar data={chartData} options={chartOptions} />}
+              {chartData
+                ? <Bar data={chartData} options={chartOptions} />
+                : <p style={styles.empty}>No data available</p>}
             </div>
 
             <div style={styles.card}>
               <h3>🥧 Distribution</h3>
-              {chartData && <Pie data={chartData} />}
+              {chartData
+                ? <Pie data={chartData} />
+                : <p style={styles.empty}>No data available</p>}
             </div>
           </div>
 
           <div style={styles.card}>
             <h3>📈 Trend</h3>
-            {trendData && <Bar data={trendData} options={chartOptions} />}
+            {trendData
+              ? <Bar data={trendData} options={chartOptions} />
+              : <p style={styles.empty}>No trend data</p>}
           </div>
 
         </div>
@@ -205,7 +211,7 @@ function ExpenseAnalytics() {
         <div style={styles.card}>
           <h3>📊 Breakdown</h3>
           {percentData.length === 0
-            ? <p>No data</p>
+            ? <p style={styles.empty}>No data available</p>
             : percentData.map((p, i) => (
                 <div key={i} style={styles.listItem}>
                   <span>{p.category}</span>
@@ -218,7 +224,7 @@ function ExpenseAnalytics() {
         <div style={styles.card}>
           <h3>🧠 Insights</h3>
           {insights.length === 0
-            ? <p>No insights yet</p>
+            ? <p style={styles.empty}>No insights yet</p>
             : insights.map((ins, i) => (
                 <div key={i} style={styles.insight}>
                   {ins}
@@ -229,23 +235,31 @@ function ExpenseAnalytics() {
 
       </div>
 
+      <SnackbarAlert
+        open={!!error}
+        message={error}
+        severity="error"
+        onClose={() => setError("")}
+      />
+
+      <SnackbarAlert
+        open={!!success}
+        message={success}
+        severity="success"
+        onClose={() => setSuccess("")}
+      />
+
     </motion.div>
   );
 }
 
-// 🎬 Animation
 const fadeAnim = {
   initial: { opacity: 0 },
   animate: { opacity: 1 }
 };
 
-// 🎨 Styles (same base, slightly polished)
 const styles = {
-  container: {
-    padding: "30px",
-    background: "transparent",
-    color: "#e2e8f0"
-  },
+  container: { padding: "30px", color: "#e2e8f0" },
   header: { marginBottom: "20px" },
   mainGrid: { display: "grid", gridTemplateColumns: "300px 1fr", gap: "20px" },
   rightSection: { display: "flex", flexDirection: "column", gap: "20px" },
@@ -270,6 +284,10 @@ const styles = {
     borderRadius: "8px",
     fontWeight: "bold",
     cursor: "pointer"
+  },
+  empty: {
+    color: "#94a3b8",
+    fontStyle: "italic"
   },
   listItem: {
     display: "flex",

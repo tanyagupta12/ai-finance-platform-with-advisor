@@ -1,6 +1,8 @@
 import { Line } from "react-chartjs-2";
 import { useEffect, useState, useRef } from "react";
 import API from "../api";
+import SnackbarAlert from "./SnackbarAlert";
+import { CircularProgress } from "@mui/material"; // ✅ ADDED
 
 import {
   Chart as ChartJS,
@@ -27,16 +29,28 @@ ChartJS.register(
 function StockChart({ ticker }) {
 
   const [chartData, setChartData] = useState(null);
+  const [loading, setLoading] = useState(false); // ✅ ADDED
+  const [error, setError] = useState("");
   const chartRef = useRef(null);
 
   useEffect(() => {
 
     const fetchData = async () => {
       try {
-        const res = await API.get(`/stock/${ticker}/history`);
+        setLoading(true);
+        setError("");
 
-        const labels = Object.keys(res.data).slice(-80);
-        const prices = Object.values(res.data).slice(-80);
+        const res = await API.get(`/stock/${ticker}/history`);
+        const data = res.data.data || {};
+
+        const labels = Object.keys(data).slice(-80);
+        const prices = Object.values(data).slice(-80);
+
+        if (!labels.length) {
+          setError("No data available for this stock");
+          setChartData(null);
+          return;
+        }
 
         setChartData({
           labels,
@@ -54,14 +68,16 @@ function StockChart({ ticker }) {
 
       } catch (err) {
         console.error(err);
+        setError("Failed to load stock data");
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchData();
+    if (ticker) fetchData();
 
   }, [ticker]);
 
-  // 🎨 Gradient (PRO LOOK)
   const getGradient = (ctx, chartArea) => {
     if (!chartArea) return null;
 
@@ -82,9 +98,7 @@ function StockChart({ ticker }) {
     },
 
     plugins: {
-      legend: {
-        display: false
-      },
+      legend: { display: false },
 
       tooltip: {
         backgroundColor: "#020617",
@@ -95,19 +109,11 @@ function StockChart({ ticker }) {
         padding: 10
       },
 
-      // 🔥 ZOOM + PAN
       zoom: {
-        pan: {
-          enabled: true,
-          mode: "x"
-        },
+        pan: { enabled: true, mode: "x" },
         zoom: {
-          wheel: {
-            enabled: true
-          },
-          pinch: {
-            enabled: true
-          },
+          wheel: { enabled: true },
+          pinch: { enabled: true },
           mode: "x"
         }
       }
@@ -115,46 +121,45 @@ function StockChart({ ticker }) {
 
     scales: {
       x: {
-        ticks: {
-          color: "#94a3b8",
-          maxTicksLimit: 6
-        },
-        grid: {
-          color: "rgba(30,41,59,0.5)"
-        }
+        ticks: { color: "#94a3b8", maxTicksLimit: 6 },
+        grid: { color: "rgba(30,41,59,0.5)" }
       },
       y: {
-        ticks: {
-          color: "#94a3b8"
-        },
-        grid: {
-          color: "rgba(30,41,59,0.5)"
-        }
+        ticks: { color: "#94a3b8" },
+        grid: { color: "rgba(30,41,59,0.5)" }
       }
     }
   };
 
+  // ✅ LOADING UI
+  if (loading) {
+    return (
+      <div style={styles.loadingBox}>
+        <CircularProgress />
+      </div>
+    );
+  }
+
+  // ❌ NO DATA
   if (!chartData) {
-    return <p style={styles.loading}>Loading chart...</p>;
+    return <p style={styles.loading}>No chart data</p>;
   }
 
   return (
     <div style={styles.card}>
 
-      {/* HEADER */}
       <div style={styles.header}>
         <h3 style={styles.title}>📈 {ticker}</h3>
 
-        {/* RESET ZOOM BUTTON */}
         <button
           style={styles.resetBtn}
           onClick={() => chartRef.current?.resetZoom()}
+          disabled={!chartData} // ✅ IMPROVED
         >
           Reset
         </button>
       </div>
 
-      {/* CHART */}
       <div style={styles.chartWrapper}>
         <Line
           ref={chartRef}
@@ -172,11 +177,16 @@ function StockChart({ ticker }) {
         />
       </div>
 
+      <SnackbarAlert
+        open={!!error}
+        message={error}
+        severity="error"
+        onClose={() => setError("")}
+      />
     </div>
   );
 }
 
-// 🎨 STYLES (COMPACT + CLEAN)
 const styles = {
   card: {
     background: "#1e293b",
@@ -211,11 +221,18 @@ const styles = {
 
   chartWrapper: {
     width: "100%",
-    height: "320px"   // ✅ COMPACT FIX (no more giant chart)
+    height: "320px"
   },
 
   loading: {
     color: "#e2e8f0"
+  },
+
+  loadingBox: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "320px"
   }
 };
 

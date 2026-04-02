@@ -5,4 +5,9 @@ router = APIRouter()
 
 @router.get("/secure-data")
 def secure_data(user: str = Depends(get_current_user)):
-    return {"message": f"Hello {user}, this is protected"}
+    return {
+        "status": "success",
+        "data": {
+            "message": f"Hello {user}, this is protected"
+        }
+    }

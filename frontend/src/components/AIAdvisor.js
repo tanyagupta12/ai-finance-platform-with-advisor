@@ -2,6 +2,7 @@ import { useState } from "react";
 import API from "../api";
 import { motion } from "framer-motion";
 import { CircularProgress } from "@mui/material";
+import SnackbarAlert from "./SnackbarAlert";
 
 function AIAdvisor() {
 
@@ -10,17 +11,19 @@ function AIAdvisor() {
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const askAI = async () => {
 
     if (!query.trim()) {
-      setError("Please enter a question");
+      setError("Please enter a financial question");
       return;
     }
 
     try {
       setLoading(true);
       setError("");
+      setSuccess("");
       setResponse("");
       setMeta(null);
 
@@ -28,16 +31,17 @@ function AIAdvisor() {
         query: query
       });
 
-      if (!res.data.answer) {
+      if (!res.data?.data) {
         throw new Error("Empty response");
       }
 
-      setResponse(res.data.answer);
-      setMeta(res.data.meta);
+      setResponse(res.data.data.answer);
+      setMeta(res.data.data.meta);
+      setSuccess("AI advice generated successfully");
 
     } catch (err) {
       console.error("AI error:", err);
-      setError("AI failed. Try again.");
+      setError(err.message || "AI request failed");
     } finally {
       setLoading(false);
     }
@@ -52,7 +56,7 @@ function AIAdvisor() {
       <div style={styles.row}>
 
         <input
-          placeholder="Ask financial question..."
+          placeholder="Ask something like: How to save more money?"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -71,7 +75,7 @@ function AIAdvisor() {
             opacity: loading ? 0.6 : 1
           }}
         >
-          {loading ? "..." : "Ask"}
+          {loading ? "Analyzing..." : "Get Advice"}
         </button>
 
       </div>
@@ -84,9 +88,11 @@ function AIAdvisor() {
         </div>
       )}
 
-      {/* ERROR */}
-      {error && (
-        <p style={styles.error}>{error}</p>
+      {/* EMPTY STATE */}
+      {!loading && !response && (
+        <p style={styles.empty}>
+          Ask a question to get personalized financial advice
+        </p>
       )}
 
       {/* META */}
@@ -123,18 +129,33 @@ function AIAdvisor() {
         </motion.div>
       )}
 
+      {/* SNACKBAR */}
+      <SnackbarAlert
+        open={!!error}
+        message={error}
+        severity="error"
+        onClose={() => setError("")}
+      />
+
+      <SnackbarAlert
+        open={!!success}
+        message={success}
+        severity="success"
+        onClose={() => setSuccess("")}
+      />
+
     </motion.div>
   );
 }
 
-// 🎬 Animation
+// Animation
 const fadeAnim = {
   initial: { opacity: 0 },
   animate: { opacity: 1 },
   transition: { duration: 0.4 }
 };
 
-// 🎨 Styles
+// Styles
 const styles = {
   card: {
     background: "rgba(30,41,59,0.9)",
@@ -180,9 +201,10 @@ const styles = {
     color: "#94a3b8"
   },
 
-  error: {
-    color: "#ef4444",
-    marginTop: "10px"
+  empty: {
+    marginTop: "15px",
+    color: "#94a3b8",
+    fontStyle: "italic"
   },
 
   metaBox: {

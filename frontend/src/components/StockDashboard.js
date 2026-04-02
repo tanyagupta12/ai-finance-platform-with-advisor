@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import API from "../api";
 import { motion } from "framer-motion";
+import SnackbarAlert from "./SnackbarAlert";
 
 import {
   Grid,
@@ -27,22 +28,36 @@ function StockDashboard({ setIsLoggedIn }) {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // 🔥 Fetch stock price
+  const sections = {
+    dashboard: useRef(null),
+    prediction: useRef(null),
+    portfolio: useRef(null),
+    analytics: useRef(null),
+    ai: useRef(null),
+    expense: useRef(null)
+  };
+
+  const scrollTo = (ref) => {
+    ref.current?.scrollIntoView({ behavior: "smooth" });
+    setSidebarOpen(false);
+  };
+
   useEffect(() => {
-
     const fetchPrice = async () => {
       try {
         setLoading(true);
         setError("");
 
         const res = await API.get(`/stock/${ticker}`);
+        const data = res.data.data;
 
-        if (res.data.error) {
+        if (!data || !data.price) {
           setError("Invalid stock ticker");
           setPrice(null);
         } else {
-          setPrice(res.data.price);
+          setPrice(data.price);
         }
 
       } catch {
@@ -54,13 +69,11 @@ function StockDashboard({ setIsLoggedIn }) {
     };
 
     fetchPrice();
-
     const interval = setInterval(fetchPrice, 30000);
     return () => clearInterval(interval);
 
   }, [ticker]);
 
-  // 🔍 Search handler
   const handleSearch = () => {
     if (!input.trim()) return;
 
@@ -73,59 +86,67 @@ function StockDashboard({ setIsLoggedIn }) {
     setInput("");
   };
 
-  // 🔐 Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     setIsLoggedIn(false);
   };
 
-  // 🔐 Test Secure API
   const getSecureData = async () => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      alert("Please login again ❌");
-      return;
-    }
-
     try {
       const res = await API.get("/secure-data");
-
-      alert(res.data.message);
+      alert(res.data.data.message);
     } catch {
-      alert("Unauthorized ❌");
+      setError("Unauthorized ❌");
     }
   };
 
-  // ⏳ Loading screen
-  if (loading && !price) {
-    return (
-      <div style={{ textAlign: "center", marginTop: "100px" }}>
-        <CircularProgress />
-        <p style={{ color: "#94a3b8" }}>Loading dashboard...</p>
-      </div>
-    );
-  }
-
-  // ❌ Error screen
-  if (error && !price) {
-    return (
-      <div style={{ textAlign: "center", marginTop: "100px", color: "red" }}>
-        <p>{error}</p>
-      </div>
-    );
-  }
-
   return (
-    <div style={styles.container}>
+    <div
+      style={{
+  ...styles.container,
+  marginLeft: sidebarOpen ? "240px" : "0px",
+  paddingTop: "20px",
+  paddingLeft: "90px"   // ✅ ADD THIS
+}}
+    >
+
+      {/* MENU BUTTON */}
+      {!sidebarOpen && (
+        <div style={styles.menuBtn} onClick={() => setSidebarOpen(true)}>
+          ☰
+        </div>
+      )}
+
+      {/* SIDEBAR */}
+      <motion.div
+        initial={{ x: -260 }}
+        animate={{ x: sidebarOpen ? 0 : -260 }}
+        transition={{ duration: 0.3 }}
+        style={styles.sidebar}
+      >
+        <h3 style={{ marginBottom: "20px" }}>📊 Menu</h3>
+
+        <button style={styles.navBtn} onClick={() => scrollTo(sections.dashboard)}>Dashboard</button>
+        <button style={styles.navBtn} onClick={() => scrollTo(sections.prediction)}>Prediction</button>
+        <button style={styles.navBtn} onClick={() => scrollTo(sections.portfolio)}>Portfolio</button>
+        <button style={styles.navBtn} onClick={() => scrollTo(sections.analytics)}>Analytics</button>
+        <button style={styles.navBtn} onClick={() => scrollTo(sections.ai)}>AI Advisor</button>
+        <button style={styles.navBtn} onClick={() => scrollTo(sections.expense)}>Expenses</button>
+
+        <button
+          style={{ ...styles.navBtn, marginTop: "20px", background: "#ef4444" }}
+          onClick={() => setSidebarOpen(false)}
+        >
+          Close
+        </button>
+      </motion.div>
 
       {/* HEADER */}
-      <div style={styles.header}>
+      <div style={styles.header} ref={sections.dashboard}>
         <div>
           <Typography variant="h4" sx={styles.mainTitle}>
             🚀 AI Financial Dashboard
           </Typography>
-
           <Typography sx={styles.subtitle}>
             Real-time insights, ML predictions & AI-powered finance tools
           </Typography>
@@ -159,13 +180,11 @@ function StockDashboard({ setIsLoggedIn }) {
           <Card sx={styles.summaryCard}>
             <CardContent>
               <Typography sx={styles.cardLabel}>Price</Typography>
-              <Typography
-                sx={{
-                  ...styles.cardValue,
-                  color: price > 0 ? "#22c55e" : "#ef4444"
-                }}
-              >
-                {loading ? "..." : price ? `$${price}` : "--"}
+              <Typography sx={{ ...styles.cardValue, fontSize: "20px", color: "#22c55e" }}>
+                {loading ? <CircularProgress size={20} /> : price ? `$${price}` : "--"}
+              </Typography>
+              <Typography sx={{ fontSize: "12px", color: "#94a3b8" }}>
+                Live Market Data
               </Typography>
             </CardContent>
           </Card>
@@ -183,113 +202,130 @@ function StockDashboard({ setIsLoggedIn }) {
         </Grid>
       </Grid>
 
-      {/* SEARCH */}
+      {/* MAIN */}
       <Grid container spacing={3}>
+
         <Grid item xs={12} md={6}>
-          <motion.div {...leftAnim}>
+          <motion.div {...fadeAnim}>
             <Card sx={styles.card}>
               <CardContent>
                 <Typography sx={styles.sectionTitle}>🔍 Search</Typography>
-
                 <TextField
                   size="small"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   sx={styles.textField}
                 />
-
                 <Button sx={styles.btn} onClick={handleSearch}>
                   Search
                 </Button>
-
-                {error && <Typography sx={{ color: "red" }}>{error}</Typography>}
               </CardContent>
             </Card>
           </motion.div>
         </Grid>
 
-        {/* STOCK CHART */}
         <Grid item xs={12} md={6}>
-          <motion.div {...rightAnim}>
+          <motion.div {...fadeAnim}>
             <Card sx={styles.card}>
               <CardContent>
-                <Typography sx={styles.sectionTitle}>
-                  📈 {ticker}
-                </Typography>
-
-                {loading ? <CircularProgress /> : <Typography>{price}</Typography>}
-
+                <Typography sx={styles.sectionTitle}>📈 {ticker}</Typography>
+                {loading ? <CircularProgress /> : <Typography>${price}</Typography>}
                 <StockChart ticker={ticker} />
               </CardContent>
             </Card>
           </motion.div>
         </Grid>
 
-        {/* FEATURES */}
-        <Grid item xs={12} md={6}>
-          <motion.div {...leftAnim}>
-            <StockPrediction ticker={ticker} />
-          </motion.div>
+        <Grid item xs={12} md={6} ref={sections.prediction}>
+          <StockPrediction ticker={ticker} />
         </Grid>
 
-        <Grid item xs={12} md={6}>
-          <motion.div {...rightAnim}>
-            <Portfolio />
-          </motion.div>
+        <Grid item xs={12} md={6} ref={sections.portfolio}>
+          <Portfolio />
         </Grid>
 
-        <Grid item xs={12} md={6}>
-          <motion.div {...leftAnim}>
-            <PortfolioAnalytics />
-          </motion.div>
+        <Grid item xs={12} md={6} ref={sections.analytics}>
+          <PortfolioAnalytics />
         </Grid>
 
-        <Grid item xs={12} md={6}>
-          <motion.div {...rightAnim}>
-            <AIAdvisor />
-          </motion.div>
+        <Grid item xs={12} md={6} ref={sections.ai}>
+          <AIAdvisor />
         </Grid>
 
-        <Grid item xs={12}>
-          <motion.div {...fadeAnim}>
-            <ExpenseAnalytics />
-          </motion.div>
+        <Grid item xs={12} ref={sections.expense}>
+          <ExpenseAnalytics />
         </Grid>
 
       </Grid>
+
+      <SnackbarAlert
+        open={!!error}
+        message={error}
+        severity="error"
+        onClose={() => setError("")}
+      />
     </div>
   );
 }
 
-// 🎬 ANIMATIONS
-const leftAnim = {
-  initial: { opacity: 0, x: -50 },
-  animate: { opacity: 1, x: 0 },
-  transition: { duration: 0.5 }
-};
-
-const rightAnim = {
-  initial: { opacity: 0, x: 50 },
-  animate: { opacity: 1, x: 0 },
-  transition: { duration: 0.5 }
-};
-
+/* ANIMATION */
 const fadeAnim = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1 },
-  transition: { duration: 0.5 }
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.4 }
 };
 
-// 🎨 STYLES
+/* STYLES */
 const styles = {
   container: {
     padding: "30px",
     minHeight: "100vh",
     color: "#e2e8f0",
     backgroundImage:
-      "linear-gradient(rgba(15,23,42,0.9), rgba(15,23,42,0.95)), url('https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3')",
+      "linear-gradient(rgba(15,23,42,0.85), rgba(15,23,42,0.9)), url('https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3')",
     backgroundSize: "cover",
-    backgroundAttachment: "fixed"
+    backgroundAttachment: "fixed",
+    transition: "all 0.3s ease"
+  },
+
+  menuBtn: {
+  position: "fixed",
+  top: "20px",
+  left: "20px",
+  fontSize: "20px",
+  cursor: "pointer",
+  zIndex: 3000,
+  background: "#020617",
+  padding: "10px 14px",
+  borderRadius: "12px",
+  color: "#e2e8f0",
+  border: "1px solid rgba(255,255,255,0.08)"
+},
+
+  sidebar: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    height: "100%",
+    width: "240px",
+    background: "rgba(15,23,42,0.9)",
+    backdropFilter: "blur(12px)",
+    padding: "20px",
+    zIndex: 2000,
+    boxShadow: "4px 0 20px rgba(0,0,0,0.5)"
+  },
+
+  navBtn: {
+    display: "block",
+    width: "100%",
+    marginBottom: "10px",
+    padding: "10px",
+    borderRadius: "8px",
+    border: "none",
+    background: "#334155",
+    color: "#fff",
+    cursor: "pointer",
+    textAlign: "left"
   },
 
   header: {
@@ -301,46 +337,19 @@ const styles = {
   mainTitle: { color: "#fff" },
   subtitle: { color: "#94a3b8" },
 
-  card: {
-    background: "rgba(30,41,59,0.85)",
-    backdropFilter: "blur(10px)",
-    borderRadius: "16px",
-    padding: "10px"
-  },
-
-  summaryCard: {
-    background: "#1e293b",
-    textAlign: "center",
-    borderRadius: "12px"
-  },
+  card: { background: "#1e293b", borderRadius: "12px" },
+  summaryCard: { background: "#1e293b", textAlign: "center" },
 
   cardLabel: { color: "#94a3b8" },
   cardValue: { color: "#fff", fontWeight: "bold" },
 
   sectionTitle: { color: "#fff" },
 
-  textField: {
-    input: { color: "#fff" },
-    marginRight: "10px"
-  },
+  textField: { input: { color: "#fff" }, marginRight: "10px" },
 
-  btn: {
-    background: "#3b82f6",
-    color: "#fff",
-    "&:hover": { background: "#2563eb" }
-  },
-
-  greenBtn: {
-    background: "#22c55e",
-    color: "#fff",
-    "&:hover": { background: "#16a34a" }
-  },
-
-  redBtn: {
-    background: "#ef4444",
-    color: "#fff",
-    "&:hover": { background: "#dc2626" }
-  }
+  btn: { background: "#3b82f6", color: "#fff" },
+  greenBtn: { background: "#22c55e", color: "#fff" },
+  redBtn: { background: "#ef4444", color: "#fff" }
 };
 
 export default StockDashboard;

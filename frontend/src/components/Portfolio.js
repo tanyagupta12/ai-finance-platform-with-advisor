@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import API from "../api";
 import { motion } from "framer-motion";
+import SnackbarAlert from "./SnackbarAlert";
 
 function Portfolio() {
 
@@ -13,16 +14,23 @@ function Portfolio() {
 
   const [loading, setLoading] = useState(false);
   const [btnLoading, setBtnLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  // 🔥 FETCH
   const fetchPortfolio = async () => {
     try {
       setLoading(true);
+      setError("");
+
       const res = await API.get("/portfolio/");
-      setPortfolio(res.data.stocks || []);
-      setSummary(res.data.summary || {});
+      const data = res.data.data;
+
+      setPortfolio(data.stocks || []);
+      setSummary(data.summary || {});
+
     } catch (err) {
       console.error(err);
+      setError("Unable to load portfolio");
     } finally {
       setLoading(false);
     }
@@ -32,27 +40,30 @@ function Portfolio() {
     fetchPortfolio();
   }, []);
 
-  // 🔥 ADD
   const addStock = async () => {
 
     if (!ticker || !shares || !price) {
-      alert("Enter all values");
+      setError("Please fill all fields");
       return;
     }
 
     if (Number(shares) <= 0 || Number(price) <= 0) {
-      alert("Invalid values");
+      setError("Values must be greater than 0");
       return;
     }
 
     try {
       setBtnLoading(true);
+      setError("");
+      setSuccess("");
 
       await API.post("/portfolio/add", {
         symbol: ticker.toUpperCase(),
         quantity: Number(shares),
         buy_price: Number(price)
       });
+
+      setSuccess("Stock added successfully");
 
       fetchPortfolio();
 
@@ -62,18 +73,29 @@ function Portfolio() {
 
     } catch (err) {
       console.error(err);
+      setError("Failed to add stock");
     } finally {
       setBtnLoading(false);
     }
   };
 
-  // 🔥 DELETE (INTERVIEW BOOST)
   const deleteStock = async (symbol) => {
+
+    const confirmDelete = window.confirm(`Remove ${symbol} from portfolio?`);
+    if (!confirmDelete) return;
+
     try {
+      setError("");
+      setSuccess("");
+
       await API.delete(`/portfolio/delete/${symbol}`);
+      setSuccess("Stock removed");
+
       fetchPortfolio();
+
     } catch (err) {
       console.error(err);
+      setError("Failed to delete stock");
     }
   };
 
@@ -86,27 +108,36 @@ function Portfolio() {
       <div style={styles.row}>
         <input
           style={styles.input}
-          placeholder="Ticker"
+          placeholder="Ticker (e.g. AAPL)"
           value={ticker}
           onChange={e => setTicker(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && addStock()}
         />
 
         <input
+          type="number"
           style={styles.input}
           placeholder="Shares"
           value={shares}
           onChange={e => setShares(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && addStock()}
         />
 
         <input
+          type="number"
           style={styles.input}
           placeholder="Buy Price"
           value={price}
           onChange={e => setPrice(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && addStock()}
         />
 
-        <button style={styles.button} onClick={addStock} disabled={btnLoading}>
-          {btnLoading ? "..." : "Add"}
+        <button
+          style={styles.button}
+          onClick={addStock}
+          disabled={btnLoading}
+        >
+          {btnLoading ? "Adding..." : "Add Stock"}
         </button>
       </div>
 
@@ -124,9 +155,11 @@ function Portfolio() {
 
       {/* LIST */}
       {loading ? (
-        <p>Loading portfolio...</p>
+        <p style={styles.empty}>Loading portfolio...</p>
       ) : portfolio.length === 0 ? (
-        <p>No stocks added yet</p>
+        <p style={styles.empty}>
+          No stocks added yet. Start by adding your first investment 🚀
+        </p>
       ) : (
         <div style={styles.listContainer}>
           {portfolio.map((p, i) => (
@@ -154,17 +187,30 @@ function Portfolio() {
         </div>
       )}
 
+      {/* SNACKBAR */}
+      <SnackbarAlert
+        open={!!error}
+        message={error}
+        severity="error"
+        onClose={() => setError("")}
+      />
+
+      <SnackbarAlert
+        open={!!success}
+        message={success}
+        severity="success"
+        onClose={() => setSuccess("")}
+      />
+
     </motion.div>
   );
 }
 
-// 🎬 Animation
 const fadeAnim = {
   initial: { opacity: 0 },
   animate: { opacity: 1 }
 };
 
-// 🎨 Styles
 const styles = {
   card: {
     background: "rgba(30,41,59,0.9)",
@@ -172,11 +218,8 @@ const styles = {
     borderRadius: "16px",
     color: "#e2e8f0"
   },
-
   title: { marginBottom: "15px" },
-
   row: { display: "flex", gap: "10px", marginBottom: "15px" },
-
   input: {
     flex: 1,
     padding: "10px",
@@ -185,7 +228,6 @@ const styles = {
     background: "#020617",
     color: "#fff"
   },
-
   button: {
     background: "#22c55e",
     border: "none",
@@ -194,11 +236,8 @@ const styles = {
     fontWeight: "bold",
     cursor: "pointer"
   },
-
   summary: { marginBottom: "15px" },
-
   listContainer: { marginTop: "10px" },
-
   listItem: {
     display: "flex",
     justifyContent: "space-between",
@@ -206,15 +245,17 @@ const styles = {
     borderBottom: "1px solid #334155",
     alignItems: "center"
   },
-
   ticker: { fontWeight: "bold", color: "#38bdf8" },
-
   deleteBtn: {
     background: "transparent",
     border: "none",
     color: "#ef4444",
     cursor: "pointer",
     fontSize: "16px"
+  },
+  empty: {
+    color: "#94a3b8",
+    fontStyle: "italic"
   }
 };
 

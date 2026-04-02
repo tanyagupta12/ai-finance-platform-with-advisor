@@ -4,7 +4,7 @@ import yfinance as yf
 
 
 def add_stock_service(stock):
-    symbol = stock.symbol.upper()
+    symbol = stock.symbol.upper().strip()
     quantity = stock.quantity
     buy_price = stock.buy_price
 
@@ -19,7 +19,10 @@ def add_stock_service(stock):
             s["quantity"] = total_qty
             s["buy_price"] = round(avg_price, 2)
 
-            return {"message": "Stock updated", "portfolio": portfolio}
+            return {
+                "message": "Stock updated",
+                "portfolio": portfolio
+            }
 
     portfolio.append({
         "symbol": symbol,
@@ -27,7 +30,10 @@ def add_stock_service(stock):
         "buy_price": buy_price
     })
 
-    return {"message": "Stock added", "portfolio": portfolio}
+    return {
+        "message": "Stock added",
+        "portfolio": portfolio
+    }
 
 
 def get_portfolio_service():
@@ -40,7 +46,7 @@ def get_portfolio_service():
             ticker = yf.Ticker(stock["symbol"])
             data = ticker.history(period="1d")
 
-            if data.empty:
+            if data is None or data.empty:
                 continue
 
             current_price = float(data["Close"].iloc[-1])
@@ -76,7 +82,7 @@ def get_portfolio_service():
 
 
 def delete_stock_service(symbol: str):
-    symbol = symbol.upper()
+    symbol = symbol.upper().strip()
 
     for stock in portfolio:
         if stock["symbol"] == symbol:

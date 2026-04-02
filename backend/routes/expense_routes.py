@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException
-from datetime import datetime
 from models.expense_model import Expense
 
 from services.expense_service import (
@@ -14,11 +13,23 @@ from services.expense_service import (
 router = APIRouter()
 
 # --------------------------------
+# Helper (avoid repetition)
+# --------------------------------
+def success_response(data):
+    return {"status": "success", "data": data}
+
+
+# --------------------------------
 # ADD EXPENSE
 # --------------------------------
 @router.post("/add")
 def add_expense(data: Expense):
-    return add_expense_service(data)
+    try:
+        return success_response(add_expense_service(data))
+    except HTTPException as e:
+        raise e
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to add expense")
 
 
 # --------------------------------
@@ -26,7 +37,10 @@ def add_expense(data: Expense):
 # --------------------------------
 @router.get("/summary")
 def expense_summary():
-    return get_summary_service()
+    try:
+        return success_response(get_summary_service())
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to fetch summary")
 
 
 # --------------------------------
@@ -34,7 +48,10 @@ def expense_summary():
 # --------------------------------
 @router.get("/detailed")
 def detailed_analysis():
-    return get_detailed_service()
+    try:
+        return success_response(get_detailed_service())
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to fetch detailed analysis")
 
 
 # --------------------------------
@@ -42,7 +59,10 @@ def detailed_analysis():
 # --------------------------------
 @router.get("/trend")
 def expense_trend():
-    return get_trend_service()
+    try:
+        return success_response(get_trend_service())
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to fetch trend")
 
 
 # --------------------------------
@@ -50,7 +70,10 @@ def expense_trend():
 # --------------------------------
 @router.get("/expenses")
 def get_expenses():
-    return get_expenses_service()
+    try:
+        return success_response(get_expenses_service())
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to fetch expenses")
 
 
 # --------------------------------
@@ -58,4 +81,7 @@ def get_expenses():
 # --------------------------------
 @router.get("/insights")
 def get_insights():
-    return get_insights_service()
+    try:
+        return success_response(get_insights_service())
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to fetch insights")

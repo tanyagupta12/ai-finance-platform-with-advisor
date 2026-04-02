@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class StockRequest(BaseModel):
-    symbol: str
-    quantity: int
-    buy_price: float
+    symbol: str = Field(..., min_length=1)
+    quantity: int = Field(..., gt=0)
+    buy_price: float = Field(..., gt=0)

@@ -5,6 +5,8 @@ from cachetools import TTLCache
 stock_cache = TTLCache(maxsize=100, ttl=300)
 
 def get_stock_data(ticker: str, period="1d"):
+    ticker = ticker.upper().strip()  
+
     key = f"{ticker}_{period}"
 
     if key in stock_cache:
@@ -13,7 +15,7 @@ def get_stock_data(ticker: str, period="1d"):
     stock = yf.Ticker(ticker)
     data = stock.history(period=period)
 
-    if data.empty:
+    if data is None or data.empty:
         return None
 
     stock_cache[key] = data

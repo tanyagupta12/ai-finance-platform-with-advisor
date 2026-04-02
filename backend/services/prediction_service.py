@@ -1,17 +1,24 @@
 import numpy as np
+import pandas as pd
 from sklearn.linear_model import LinearRegression
 
 def predict_stock(data):
-    data["Days"] = np.arange(len(data))
-    data["Prediction"] = data["Close"].shift(-1)
+    df = data.copy()
 
-    X = data[["Days"]][:-1]
-    y = data["Prediction"].dropna()
+    # Create feature
+    df["Days"] = np.arange(len(df))
+    df["Prediction"] = df["Close"].shift(-1)
+
+    # Training data
+    X = df[["Days"]][:-1]
+    y = df["Prediction"].dropna()
 
     model = LinearRegression()
     model.fit(X, y)
 
-    next_day = np.array([[len(data)]])
+    # ✅ FIX: Use DataFrame with same column name
+    next_day = pd.DataFrame([[len(df)]], columns=["Days"])
+
     prediction = model.predict(next_day)
 
     return float(prediction[0])

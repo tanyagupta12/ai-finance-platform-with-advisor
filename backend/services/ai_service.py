@@ -1,7 +1,13 @@
 import requests
 import json
+import os
+import logging
 from data_store import portfolio, expenses
 
+# --------------------------------
+# Config
+# --------------------------------
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 
 # --------------------------------
 # Helper: Financial Analysis
@@ -41,7 +47,7 @@ def get_ai_advice(query: str):
 
     query = query.strip()
     if not query:
-        return {"answer": "Please enter a valid financial question."}
+        raise ValueError("Empty query")
 
     total_expense, high_spend, risk_flag, total_investment = analyze_financials()
 
@@ -76,17 +82,20 @@ FORMAT:
 
     try:
         response = requests.post(
-            "http://localhost:11434/api/generate",
+            OLLAMA_URL,
             json={
                 "model": "tinyllama",
                 "prompt": prompt,
-                "stream": False
+                "stream": False,
+                "options": {
+                    "num_predict": 100   # ✅ faster response, avoids timeout
+                }
             },
-            timeout=30
+            timeout=60
         )
 
-        if response.status_code != 200:
-            raise Exception("Ollama error")
+        # ✅ Better error handling
+        response.raise_for_status()
 
         result = response.json()
         answer = result.get("response", "").strip()
@@ -95,12 +104,11 @@ FORMAT:
             raise Exception("Empty response")
 
     except Exception as e:
-        print("AI ERROR:", e)
+        logging.error(f"AI ERROR: {e}")
 
-        answer = f"""
-• Reduce {high_spend} spending by 10-20% (₹{int(total_expense*0.1)})
-• Invest at least ₹5000 monthly to improve financial stability
-"""
+        # ✅ Strong fallback (keeps UI working always)
+        answer = f"""• Reduce {high_spend} spending by 10-20% (₹{int(total_expense * 0.1)})
+• Invest ₹5000–₹10000 monthly to improve portfolio stability"""
 
     return {
         "answer": answer,

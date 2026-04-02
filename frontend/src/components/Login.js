@@ -1,12 +1,20 @@
 import React, { useState } from "react";
-import API from "../api";   // ✅ use centralized API
-import { TextField, Button, Typography, Card, CardContent } from "@mui/material";
+import API from "../api";
+import {
+  TextField,
+  Button,
+  Typography,
+  Card,
+  CardContent
+} from "@mui/material";
+import SnackbarAlert from "./SnackbarAlert";
 
 function Login({ setIsLoggedIn }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const loginUser = async () => {
     if (!email || !password) {
@@ -17,22 +25,27 @@ function Login({ setIsLoggedIn }) {
     try {
       setLoading(true);
       setError("");
+      setSuccess("");
 
       const res = await API.post("/auth/login", {
         email,
         password,
       });
 
-      if (res.data.access_token) {
-        localStorage.setItem("token", res.data.access_token);
-        setIsLoggedIn(true);  // 🚀 go to dashboard
+      if (res.data.data?.access_token) {
+        localStorage.setItem("token", res.data.data.access_token);
+        setSuccess("Login successful 🚀");
+
+        setTimeout(() => {
+          setIsLoggedIn(true);
+        }, 800);
       } else {
-        setError("Token not received ❌");
+        setError("Authentication failed");
       }
 
     } catch (err) {
       console.error(err);
-      setError("Invalid credentials ❌");
+      setError(err.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -44,17 +57,19 @@ function Login({ setIsLoggedIn }) {
         <CardContent>
 
           <Typography variant="h5" sx={styles.title}>
-            🔐 Login to Dashboard
+            🔐 Sign in to your account
           </Typography>
 
           {/* EMAIL */}
           <TextField
             fullWidth
             label="Email"
+            placeholder="Enter your email"
             variant="outlined"
             margin="normal"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && loginUser()} // ✅ FIX
             sx={styles.input}
           />
 
@@ -63,19 +78,14 @@ function Login({ setIsLoggedIn }) {
             fullWidth
             type="password"
             label="Password"
+            placeholder="Enter your password"
             variant="outlined"
             margin="normal"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && loginUser()} // ✅ FIX
             sx={styles.input}
           />
-
-          {/* ERROR */}
-          {error && (
-            <Typography sx={{ color: "red", mt: 1 }}>
-              {error}
-            </Typography>
-          )}
 
           {/* BUTTON */}
           <Button
@@ -84,16 +94,31 @@ function Login({ setIsLoggedIn }) {
             onClick={loginUser}
             disabled={loading}
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading ? "Signing in..." : "Sign In"}
           </Button>
 
         </CardContent>
       </Card>
+
+      {/* SNACKBAR */}
+      <SnackbarAlert
+        open={!!error}
+        message={error}
+        severity="error"
+        onClose={() => setError("")}
+      />
+
+      <SnackbarAlert
+        open={!!success}
+        message={success}
+        severity="success"
+        onClose={() => setSuccess("")}
+      />
+
     </div>
   );
 }
 
-// 🎨 STYLES (same theme maintained)
 const styles = {
   container: {
     height: "100vh",
@@ -127,6 +152,7 @@ const styles = {
     marginTop: "15px",
     background: "#3b82f6",
     color: "#fff",
+    fontWeight: "bold",
     "&:hover": { background: "#2563eb" }
   }
 };
