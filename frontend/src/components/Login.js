@@ -45,7 +45,7 @@ function Login({ setIsLoggedIn }) {
 
     } catch (err) {
       console.error(err);
-      setError(err.message || "Login failed");
+      setError(err || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -60,6 +60,41 @@ function Login({ setIsLoggedIn }) {
             🔐 Sign in to your account
           </Typography>
 
+          {/* 🔥 DEMO ACCESS */}
+          <Typography
+            variant="body2"
+            sx={{
+              color: "#cbd5f5",
+              textAlign: "center",
+              marginBottom: "10px",
+              fontSize: "13px"
+            }}
+          >
+            🔑 Demo Access:
+            <br />
+            Email: <b>test@gmail.com</b>
+            <br />
+            Password: <b>1234</b>
+          </Typography>
+
+          {/* 🚀 TRY DEMO BUTTON */}
+          <Button
+            fullWidth
+            sx={{
+              marginBottom: "10px",
+              background: "#22c55e",
+              color: "#fff",
+              fontWeight: "bold",
+              "&:hover": { background: "#16a34a" }
+            }}
+            onClick={() => {
+              setEmail("test@gmail.com");
+              setPassword("1234");
+            }}
+          >
+            Try Demo Instantly 🚀
+          </Button>
+
           {/* EMAIL */}
           <TextField
             fullWidth
@@ -69,7 +104,7 @@ function Login({ setIsLoggedIn }) {
             margin="normal"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && loginUser()} // ✅ FIX
+            onKeyDown={(e) => e.key === "Enter" && loginUser()}
             sx={styles.input}
           />
 
@@ -83,7 +118,7 @@ function Login({ setIsLoggedIn }) {
             margin="normal"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && loginUser()} // ✅ FIX
+            onKeyDown={(e) => e.key === "Enter" && loginUser()}
             sx={styles.input}
           />
 
